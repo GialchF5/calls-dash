@@ -69,7 +69,7 @@ python scripts/sync_calls_dashboard_data.py
 
 - Во всех HTML есть `<meta name="viewport" content="width=device-width, initial-scale=1" />`.
 - На узком экране (до ~640px): KPI в одну колонку, полоса источника вертикально, высота графиков через CSS-переменную `--chart-height` (см. `css/common.css`).
-- `chart-env.js`: ограничение `devicePixelRatio`, отключение анимации Chart.js и подписей datalabels на мобилке — меньше подвисаний при открытии страниц с многими графиками.
+- `chart-env.js`: ограничение `devicePixelRatio`, на узком экране отключена анимация Chart.js (ярлыки datalabels на столбцах/линиях **сохраняются**).
 
 Для проверки на телефоне удобнее **HTTPS** (GitHub Pages или локальный сервер), не `file://`.
 

@@ -12,7 +12,8 @@
   }
 
   /**
-   * Добавляет devicePixelRatio, animation и на мобилке отключает datalabels.
+   * Добавляет devicePixelRatio и animation (на мобилке анимация отключена).
+   * Ярлыки datalabels не отключаются — остаются на всех графиках.
    * @param {object} options — опции Chart.js
    */
   function mergeChartOptions(options) {
@@ -20,13 +21,6 @@
     var o = Object.assign({}, options);
     o.devicePixelRatio = getDevicePixelRatio();
     o.animation = getAnimation();
-    if (o.plugins && o.plugins.datalabels) {
-      o.plugins = Object.assign({}, o.plugins);
-      o.plugins.datalabels = Object.assign({}, options.plugins.datalabels);
-      if (isNarrowMobile()) {
-        o.plugins.datalabels.display = false;
-      }
-    }
     return o;
   }
 
