@@ -22,7 +22,8 @@ calls-dashboard/
   css/common.css     # переключатель источника и навигация
   js/
     source-store.js   # чтение/запись источника в localStorage
-    data-loader.js    # загрузка данных
+    data-loader.js    # загрузка данных (по HTTPS — только JSON; file:// — подгрузка bundled.js)
+    chart-env.js      # мобилка: DPR, без анимации, отключение datalabels на узком экране
     month-aggregate.js # агрегация фев/мар для index.html
   data/
     catalog.json      # срез «Каталог» (копия формата daily-data)
@@ -34,7 +35,7 @@ calls-dashboard/
 
 Файлы `catalog.json` и `vk.json` — тот же формат, что `daily-data.json` в основном проекте: поле `days`, объект `projects` с проектами **Сеосейлс**, **Kineiro**, **Урман Билд**, для каждого — блоки `feb` и `mar` с массивами `leads`, `calls`, `presentations`, `qualified` по индексам из `days`.
 
-Загрузка: при открытии по **http(s)** запрашиваются `./data/catalog.json` или `./data/vk.json`. При протоколе **file://** используется `bundled.js` (оба набора в одном файле).
+Загрузка: при **http(s)** (в т.ч. GitHub Pages) запрашивается только `./data/catalog.json` или `./data/vk.json` — **`bundled.js` в HTML не подключается**, чтобы не парсить лишние данные на телефоне. При **file://** `data-loader.js` **динамически** подгружает `bundled.js`, затем читает `window.__CALLS_DASHBOARD_DATA`.
 
 ## Обновление данных из основного репозитория
 
@@ -54,7 +55,7 @@ python scripts/sync_calls_dashboard_data.py
   `npx serve .` или `python -m http.server 8080`  
   затем открыть `http://localhost:8080/`.
 
-- **Без сервера:** открыть `index.html` через проводник — сработает `bundled.js`, если файл подключён в HTML (как сейчас).
+- **Без сервера:** открыть `index.html` через проводник — `data-loader` подтянет `data/bundled.js` при необходимости (нужны актуальные `bundled.js` и JSON в `data/`).
 
 ## GitHub Pages
 
@@ -63,6 +64,14 @@ python scripts/sync_calls_dashboard_data.py
 - Файл **`.nojekyll`** в корне нужен, чтобы GitHub не прогонял сайт через Jekyll и не ломал отдачу статики.
 
 После пуша подождите 1–3 минуты и обновите страницу.
+
+## Мобильные и производительность
+
+- Во всех HTML есть `<meta name="viewport" content="width=device-width, initial-scale=1" />`.
+- На узком экране (до ~640px): KPI в одну колонку, полоса источника вертикально, высота графиков через CSS-переменную `--chart-height` (см. `css/common.css`).
+- `chart-env.js`: ограничение `devicePixelRatio`, отключение анимации Chart.js и подписей datalabels на мобилке — меньше подвисаний при открытии страниц с многими графиками.
+
+Для проверки на телефоне удобнее **HTTPS** (GitHub Pages или локальный сервер), не `file://`.
 
 ## Зависимости
 

@@ -41,3 +41,39 @@
 .nav-links a:hover {
   color: #c7d2fe;
 }
+
+/* Высота графиков и мобильная вёрстка */
+:root {
+  --chart-height: 260px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --chart-height: 200px;
+  }
+
+  .source-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .source-bar select {
+    width: 100%;
+    max-width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .nav-links {
+    width: 100%;
+    gap: 6px 12px;
+  }
+
+  .nav-links a {
+    padding: 6px 2px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+}

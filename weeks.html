@@ -6,6 +6,7 @@
   <title>Сравнение по неделям — calls-dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="./js/chart-env.js"></script>
   <link rel="stylesheet" href="./css/common.css" />
   <style>
     :root {
@@ -110,7 +111,11 @@
     @media (max-width: 900px) {
       .charts-grid { grid-template-columns: minmax(0, 1fr); }
     }
-    canvas { width: 100% !important; height: 260px !important; }
+    @media (max-width: 640px) {
+      .kpi-grid { grid-template-columns: minmax(0, 1fr); }
+      h1 { font-size: 20px; }
+    }
+    canvas { width: 100% !important; height: var(--chart-height, 260px) !important; }
     .badge {
       display: inline-flex;
       align-items: center;
@@ -140,7 +145,6 @@
 <body>
   <script src="./js/source-store.js"></script>
   <script src="./js/data-loader.js"></script>
-  <script src="./data/bundled.js"></script>
 
   <div class="source-bar">
     <div>
@@ -383,7 +387,7 @@
       charts[id] = new Chart(el, {
         type: 'bar',
         data: { labels: labelsProjects, datasets },
-        options: {
+        options: CallsChartEnv.mergeChartOptions({
           ...baseOptions,
           plugins: {
             ...baseOptions.plugins,
@@ -393,7 +397,7 @@
             ...baseOptions.scales,
             y: yMerged
           }
-        }
+        })
       });
     }
 
