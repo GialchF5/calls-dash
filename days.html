@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Дашборд по дням — calls-dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link rel="stylesheet" href="./css/common.css" />
+  <style>
+    :root{
+      --bg:#070a12;
+      --border:rgba(148,163,184,.20);
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:22px;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(900px 420px at 18% 8%, rgba(79,70,229,.20), transparent 65%),
+        radial-gradient(900px 420px at 82% 18%, rgba(249,115,22,.14), transparent 60%),
+        radial-gradient(900px 520px at 55% 90%, rgba(56,189,248,.10), transparent 60%),
+        linear-gradient(180deg, #050713 0%, #020617 60%, #020617 100%);
+      color:var(--text);
+    }
+    .top{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+    h1{margin:0;font-size:22px;font-weight:650;letter-spacing:.2px}
+    .sub{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.35;
+    }
+    a{color:#a5b4fc;text-decoration:none;border-bottom:1px dashed rgba(165,180,252,.5)}
+    .controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .control{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      padding:8px 10px;
+      border-radius:12px;
+      background:linear-gradient(135deg, rgba(2,6,23,.85), rgba(15,23,42,.55));
+      border:1px solid var(--border);
+      box-shadow:0 18px 55px rgba(0,0,0,.35);
+    }
+    .label{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+    select{
+      background:rgba(15,23,42,.75);
+      color:var(--text);
+      border:1px solid rgba(148,163,184,.28);
+      padding:6px 8px;
+      border-radius:10px;
+      font-size:12px;
+      outline:none;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:14px;
+      margin-top:10px;
+    }
+    @media (max-width: 980px){ .grid{grid-template-columns:minmax(0,1fr)} }
+    .card{
+      background:radial-gradient(circle at top left, rgba(15,23,42,.95) 0, rgba(2,6,23,.92) 70%);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px 16px 12px;
+      box-shadow:0 20px 60px rgba(0,0,0,.45);
+    }
+    .card-head{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .title{
+      font-size:13px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .pill{
+      font-size:11px;
+      color:var(--muted);
+      border:1px solid rgba(148,163,184,.25);
+      padding:2px 8px;
+      border-radius:999px;
+      background:rgba(2,6,23,.55);
+      white-space:nowrap;
+    }
+    canvas{width:100% !important;height:290px !important}
+    .note{margin-top:6px;font-size:11px;color:var(--muted);}
+    .err{
+      border: 1px solid rgba(248,113,113,.35);
+      background: rgba(127,29,29,.20);
+      color: #fecaca;
+      padding: 10px 12px;
+      border-radius: 14px;
+      margin-top: 10px;
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <script src="./js/source-store.js"></script>
+  <script src="./js/data-loader.js"></script>
+  <script src="./data/bundled.js"></script>
+
+  <div class="source-bar">
+    <div>
+      <label for="sourceSelect">Источник</label>
+      <select id="sourceSelect" aria-label="Источник данных">
+        <option value="catalog">Каталог</option>
+        <option value="vk">ВК</option>
+      </select>
+    </div>
+    <nav class="nav-links">
+      <a href="./index.html">Месяц</a>
+      <a href="./days.html">По дням</a>
+      <a href="./weeks.html">По неделям</a>
+      <a href="./urman-vr-mar.html">Урман vs ВР</a>
+    </nav>
+  </div>
+
+  <div class="top">
+    <div>
+      <h1>По дням (фев/мар 2026)</h1>
+      <div class="sub" id="subNote">
+        Графики в разрезе дней. Данные — <code>calls-dashboard/data/</code> (синхронизация с Catalog/VK).
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control">
+        <div class="label">Проект</div>
+        <select id="projectSelect"></select>
+      </div>
+      <div class="control">
+        <div class="label">Метрика</div>
+        <select id="metricSelect">
+          <option value="leads">Лиды (шт)</option>
+          <option value="calls">Дозвоны (шт)</option>
+          <option value="contactPct">% дозваниваемости</option>
+          <option value="presentations">Презентации (шт)</option>
+          <option value="presentationsPct">% презентаций</option>
+          <option value="qualified">Квал (шт)</option>
+          <option value="qualifiedPct">% квалификации</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadError" class="err"></div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div class="title" id="chartTitle">Метрика по дням</div>
+        <span class="pill">март 26 vs фев 26</span>
+      </div>
+      <canvas id="dailyChart"></canvas>
+      <div class="note">Линии: март и февраль. Ось X — день месяца.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="title">Разница (март − февраль)</div>
+        <span class="pill">по дням</span>
+      </div>
+      <canvas id="deltaChart"></canvas>
+      <div class="note">
+        Это <b>март − февраль</b> для каждого дня: положительное значение значит, что <b>в марте больше</b>, отрицательное — что <b>в феврале больше</b>.
+        Для метрик в % разница тоже в <b>процентных пунктах</b>.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    Chart.register(ChartDataLabels);
+
+    const pct = (num, den) => den ? (num / den) * 100 : 0;
+    const round1 = (v) => Math.round(v * 10) / 10;
+    const fmtRu = (v) => (typeof v === 'number' ? v.toLocaleString('ru-RU') : (v ?? ''));
+    const fmtPct = (v) => (round1(v)).toString().replace('.', ',') + '%';
+
+    const METRICS = {
+      leads: { title: 'Лиды (шт) по дням', kind: 'number' },
+      calls: { title: 'Дозвоны (шт) по дням', kind: 'number' },
+      presentations: { title: 'Презентации (шт) по дням', kind: 'number' },
+      qualified: { title: 'Квал (шт) по дням', kind: 'number' },
+      contactPct: { title: '% дозваниваемости по дням', kind: 'pct' },
+      presentationsPct: { title: '% презентаций по дням', kind: 'pct' },
+      qualifiedPct: { title: '% квалификации по дням', kind: 'pct' },
+    };
+
+    function baseOptions(kind) {
+      const isPct = kind === 'pct';
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#e5e7eb', font: { size: 11 } } },
+          tooltip: {
+            backgroundColor: 'rgba(15,23,42,0.95)',
+            borderColor: 'rgba(55,65,81,1)',
+            borderWidth: 1,
+            titleColor: '#e5e7eb',
+            bodyColor: '#e5e7eb',
+            padding: 8,
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed.y;
+                return ctx.dataset.label + ': ' + (isPct ? fmtPct(v) : fmtRu(v));
+              }
+            }
+          },
+          datalabels: { display: false }
+        },
+        scales: {
+          x: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { color: 'rgba(31,41,55,0.35)' } },
+          y: {
+            beginAtZero: true,
+            ticks: { color: '#9ca3af', font: { size: 11 }, callback: (v) => isPct ? (v + '%') : v },
+            grid: { color: 'rgba(31,41,55,0.35)' }
+          }
+        }
+      };
+    }
+
+    function mkLineChart(ctx, labels, febData, marData, kind, metricKey) {
+      const isPct = kind === 'pct';
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'март 26',
+              data: marData,
+              borderColor: 'rgba(79,70,229,1)',
+              backgroundColor: 'rgba(79,70,229,.15)',
+              pointRadius: 2.5,
+              pointHoverRadius: 3.5,
+              tension: 0.25,
+              fill: true
+            },
+            {
+              label: 'фев 26',
+              data: febData,
+              borderColor: 'rgba(249,115,22,1)',
+              backgroundColor: 'rgba(249,115,22,.12)',
+              pointRadius: 2.5,
+              pointHoverRadius: 3.5,
+              tension: 0.25,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          ...baseOptions(kind),
+          plugins: {
+            ...baseOptions(kind).plugins,
+            datalabels: {
+              color: '#e5e7eb',
+              align: 'top',
+              anchor: 'end',
+              offset: 4,
+              font: { size: 10, weight: '600' },
+              display: (ctx2) => {
+                const v = ctx2.dataset.data?.[ctx2.dataIndex];
+                if (metricKey === 'leads') return typeof v === 'number' && v !== 0;
+                return ctx2.dataIndex === (ctx2.dataset.data?.length ?? 0) - 1;
+              },
+              formatter: (v) => {
+                if (typeof v !== 'number') return '';
+                return isPct ? fmtPct(v) : fmtRu(v);
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function mkDeltaChart(ctx, labels, delta, kind) {
+      const isPct = kind === 'pct';
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Δ (март − фев)',
+              data: delta,
+              backgroundColor: delta.map(v => (typeof v === 'number' && v >= 0) ? 'rgba(34,197,94,.75)' : 'rgba(248,113,113,.75)'),
+              borderColor: delta.map(v => (typeof v === 'number' && v >= 0) ? 'rgba(74,222,128,1)' : 'rgba(252,165,165,1)'),
+              borderWidth: 1.2,
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          ...baseOptions(kind),
+          plugins: {
+            ...baseOptions(kind).plugins,
+            datalabels: {
+              color: '#e5e7eb',
+              anchor: 'end',
+              align: 'end',
+              offset: -2,
+              font: { size: 10, weight: '500' },
+              formatter: (v) => {
+                if (typeof v !== 'number') return '';
+                return isPct ? fmtPct(v) : fmtRu(v);
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function ensureDerived(projectData) {
+      for (const m of ['feb','mar']) {
+        const leadArr = projectData[m]?.leads || [];
+        const callsArr = projectData[m]?.calls || [];
+        const presArr = projectData[m]?.presentations || [];
+        const kvalArr = projectData[m]?.qualified || [];
+
+        projectData[m].contactPct = (projectData[m].contactPct && projectData[m].contactPct.length)
+          ? projectData[m].contactPct
+          : callsArr.map((c,i) => pct(c, leadArr[i]));
+        projectData[m].presentationsPct = (projectData[m].presentationsPct && projectData[m].presentationsPct.length)
+          ? projectData[m].presentationsPct
+          : presArr.map((p,i) => pct(p, leadArr[i]));
+        projectData[m].qualifiedPct = (projectData[m].qualifiedPct && projectData[m].qualifiedPct.length)
+          ? projectData[m].qualifiedPct
+          : kvalArr.map((k,i) => pct(k, leadArr[i]));
+      }
+      return projectData;
+    }
+
+    let dailyChart, deltaChart;
+    let DATA;
+
+    function getProjectNames() { return Object.keys(DATA.projects || {}); }
+    function getSeries(projectName, metricKey) {
+      const proj = ensureDerived(DATA.projects[projectName] || {});
+      const feb = (proj.feb && proj.feb[metricKey]) ? proj.feb[metricKey] : [];
+      const mar = (proj.mar && proj.mar[metricKey]) ? proj.mar[metricKey] : [];
+      return { feb, mar };
+    }
+
+    function updateCharts() {
+      if (!DATA || !DATA.projects) return;
+      const projectName = document.getElementById('projectSelect').value;
+      const metricKey = document.getElementById('metricSelect').value;
+      const meta = METRICS[metricKey] || METRICS.leads;
+
+      document.getElementById('chartTitle').textContent = meta.title + ' — ' + projectName;
+
+      const labels = (DATA.days || []).map(d => String(d));
+      const { feb, mar } = getSeries(projectName, metricKey);
+
+      const safeFeb = labels.map((_, i) => typeof feb[i] === 'number' ? feb[i] : null);
+      const safeMar = labels.map((_, i) => typeof mar[i] === 'number' ? mar[i] : null);
+      const delta = labels.map((_, i) => {
+        const a = safeMar[i], b = safeFeb[i];
+        if (typeof a !== 'number' || typeof b !== 'number') return null;
+        return a - b;
+      });
+
+      if (dailyChart) dailyChart.destroy();
+      if (deltaChart) deltaChart.destroy();
+
+      dailyChart = mkLineChart(
+        document.getElementById('dailyChart'),
+        labels,
+        safeFeb,
+        safeMar,
+        meta.kind,
+        metricKey
+      );
+      deltaChart = mkDeltaChart(
+        document.getElementById('deltaChart'),
+        labels,
+        delta,
+        meta.kind
+      );
+    }
+
+    function fillProjectSelect() {
+      const projectSelect = document.getElementById('projectSelect');
+      projectSelect.innerHTML = '';
+      const names = getProjectNames();
+      for (const n of names) {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        projectSelect.appendChild(opt);
+      }
+      if (names.length) projectSelect.value = names[0];
+    }
+
+    async function loadAndRender(source) {
+      const errEl = document.getElementById('loadError');
+      errEl.style.display = 'none';
+      DATA = await CallsDashboardData.loadDailyData(source);
+      fillProjectSelect();
+      const label = source === 'vk' ? 'ВК' : 'Каталог';
+      document.getElementById('subNote').innerHTML =
+        'Графики в разрезе дней. Источник: <b>' + label + '</b>. Данные — <code>calls-dashboard/data/</code>.';
+      updateCharts();
+    }
+
+    (async function init() {
+      try {
+        const sel = document.getElementById('sourceSelect');
+        sel.value = CallsDashboardSource.getSource();
+        await loadAndRender(CallsDashboardSource.getSource());
+
+        CallsDashboardSource.bindSourceSelect(sel, async function (s) {
+          try {
+            await loadAndRender(s);
+          } catch (e) {
+            const errEl = document.getElementById('loadError');
+            errEl.style.display = 'block';
+            errEl.textContent = String(e && e.message ? e.message : e);
+          }
+        });
+
+        document.getElementById('projectSelect').addEventListener('change', updateCharts);
+        document.getElementById('metricSelect').addEventListener('change', updateCharts);
+      } catch (e) {
+        const errEl = document.getElementById('loadError');
+        errEl.style.display = 'block';
+        errEl.textContent = 'Не получилось загрузить данные.\n\n' + String(e?.message || e);
+      }
+    })();
+  </script>
+</body>
+</html>

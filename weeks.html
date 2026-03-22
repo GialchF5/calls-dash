@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Сравнение по неделям — calls-dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link rel="stylesheet" href="./css/common.css" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --accent1: #4f46e5;
+      --accent2: #f97316;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1e293b 0, #020617 55%);
+      color: var(--text);
+    }
+    h1 { margin: 0 0 4px; font-size: 26px; font-weight: 600; }
+    .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 12px; line-height: 1.4; }
+    a { color: #a5b4fc; text-decoration: none; border-bottom: 1px dashed rgba(165, 180, 252, 0.5); }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.5);
+    }
+    .filters label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 4px; }
+    .filters select {
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      min-width: 200px;
+      max-width: 100%;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      gap: 20px;
+    }
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: minmax(0, 1fr); }
+    }
+    .card {
+      background: radial-gradient(circle at top left, #1f2937 0, #020617 70%);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 16px 18px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+      gap: 12px;
+    }
+    .card-title {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: var(--muted);
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .kpi {
+      padding: 10px 10px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.4));
+      border: 1px solid rgba(31, 41, 55, 0.9);
+    }
+    .kpi-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .kpi-value { font-size: 18px; font-weight: 600; }
+    .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .kpi-up { color: #22c55e; }
+    .kpi-down { color: #f97316; }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .span-2 { grid-column: 1 / -1; }
+    @media (max-width: 900px) {
+      .charts-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    canvas { width: 100% !important; height: 260px !important; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(55, 65, 81, 1);
+      color: var(--muted);
+      flex-wrap: wrap;
+      max-width: 100%;
+    }
+    .dot-a { width: 7px; height: 7px; border-radius: 999px; background: var(--accent1); flex-shrink: 0; }
+    .dot-b { width: 7px; height: 7px; border-radius: 999px; background: var(--accent2); flex-shrink: 0; }
+    .err {
+      display: none;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: #fecaca;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <script src="./js/source-store.js"></script>
+  <script src="./js/data-loader.js"></script>
+  <script src="./data/bundled.js"></script>
+
+  <div class="source-bar">
+    <div>
+      <label for="sourceSelect">Источник</label>
+      <select id="sourceSelect" aria-label="Источник данных">
+        <option value="catalog">Каталог</option>
+        <option value="vk">ВК</option>
+      </select>
+    </div>
+    <nav class="nav-links">
+      <a href="./index.html">Месяц</a>
+      <a href="./days.html">По дням</a>
+      <a href="./weeks.html">По неделям</a>
+      <a href="./urman-vr-mar.html">Урман vs ВР</a>
+    </nav>
+  </div>
+
+  <header style="margin-bottom: 16px;">
+    <h1>Сравнение воронки по неделям (февраль–март 2026)</h1>
+    <div class="subtitle">
+      Выбираете <b>один диапазон по числам месяца</b> (<b>1–8</b>, <b>9–15</b>, …); на графиках сравниваются <b>этот же диапазон в марте</b> и <b>в феврале</b>.
+      Данные из <code>calls-dashboard/data/</code>.
+    </div>
+  </header>
+
+  <div id="loadError" class="err"></div>
+
+  <div class="filters">
+    <div>
+      <label>Диапазон (одинаковый для февраля и марта)</label>
+      <select id="weekRange"></select>
+    </div>
+  </div>
+
+  <section class="layout">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Ключевые метрики по проектам</div>
+        <div class="badge" id="weekBadge">
+          <span class="dot-a"></span><span id="badgeLabelA">—</span>
+          <span style="width: 1px; height: 12px; background: rgba(75, 85, 99, 0.7); margin: 0 4px;"></span>
+          <span class="dot-b"></span><span id="badgeLabelB">—</span>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="card span-2">
+        <div class="card-header">
+          <div class="card-title">Объём лидов по проектам</div>
+          <span class="pill">Лиды (шт)</span>
+        </div>
+        <canvas id="leadsChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Дозвоны</div><span class="pill">Звонки &gt; 15 сек (шт)</span></div>
+        <canvas id="callsChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">% дозваниваемости</div><span class="pill">Дозвоны / лиды</span></div>
+        <canvas id="contactChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Презентации по Б24</div><span class="pill">Презентации (шт)</span></div>
+        <canvas id="presentationsChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">% презентаций от лидов</div><span class="pill">Презентации / лиды</span></div>
+        <canvas id="presentationsPctChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Квалифицированные лиды</div><span class="pill">Квал (шт)</span></div>
+        <canvas id="qualifiedChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">% квалификации от лидов</div><span class="pill">Квал / лиды</span></div>
+        <canvas id="qualifiedPctChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    Chart.register(ChartDataLabels);
+
+    const YEAR = 2026;
+    const PROJECTS = ['Сеосейлс', 'Kineiro', 'Урман Билд'];
+    const labelsProjects = PROJECTS;
+
+    const pct = (num, den) => (den ? (num / den) * 100 : 0);
+    const round0 = (x) => Math.round(x);
+    const round1 = (x) => Math.round(x * 10) / 10;
+    const fmtRu = (n) => (typeof n === 'number' ? n.toLocaleString('ru-RU') : String(n));
+
+    function dayNumToWeekIndex(dayNum) {
+      if (dayNum >= 1 && dayNum <= 8) return 1;
+      if (dayNum <= 15) return 2;
+      if (dayNum <= 22) return 3;
+      if (dayNum <= 29) return 4;
+      return 5;
+    }
+
+    const WEEK_RANGE_LABEL = { 1: '1–8', 2: '9–15', 3: '16–22', 4: '23–29', 5: '30–31' };
+    const MONTH_SHORT = { feb: 'фев', mar: 'мар' };
+
+    function ensureDerived(projectData) {
+      for (const m of ['feb', 'mar']) {
+        const L = projectData[m]?.leads || [];
+        const C = projectData[m]?.calls || [];
+        const P = projectData[m]?.presentations || [];
+        const Q = projectData[m]?.qualified || [];
+        projectData[m].contactPct = C.map((c, i) => pct(c, L[i]));
+        projectData[m].presentationsPct = P.map((p, i) => pct(p, L[i]));
+        projectData[m].qualifiedPct = Q.map((q, i) => pct(q, L[i]));
+      }
+      return projectData;
+    }
+
+    function emptyMonthWeekRow(monthKey, weekIdx) {
+      return {
+        monthKey,
+        weekIdx,
+        label: (MONTH_SHORT[monthKey] || monthKey) + ' ' + WEEK_RANGE_LABEL[weekIdx],
+        projects: {}
+      };
+    }
+
+    function aggregateAllWeeks(data) {
+      const byKey = new Map();
+      for (let w = 1; w <= 5; w++) {
+        byKey.set('feb:' + w, emptyMonthWeekRow('feb', w));
+        byKey.set('mar:' + w, emptyMonthWeekRow('mar', w));
+      }
+      for (const proj of PROJECTS) {
+        const pd = ensureDerived(JSON.parse(JSON.stringify(data.projects[proj] || {})));
+        for (const monthKey of ['feb', 'mar']) {
+          const mi = monthKey === 'feb' ? 1 : 2;
+          const s = pd[monthKey];
+          if (!s) continue;
+          const days = data.days || [];
+          for (let i = 0; i < days.length; i++) {
+            const dayNum = days[i];
+            const dt = new Date(YEAR, mi, dayNum);
+            if (dt.getMonth() !== mi) continue;
+            const weekIdx = dayNumToWeekIndex(dayNum);
+            const b = byKey.get(monthKey + ':' + weekIdx);
+            if (!b.projects[proj]) b.projects[proj] = { leads: 0, calls: 0, presentations: 0, qualified: 0 };
+            b.projects[proj].leads += +s.leads[i] || 0;
+            b.projects[proj].calls += +s.calls[i] || 0;
+            b.projects[proj].presentations += +s.presentations[i] || 0;
+            b.projects[proj].qualified += +s.qualified[i] || 0;
+          }
+        }
+      }
+      const bands = [];
+      for (let w = 1; w <= 5; w++) {
+        bands.push({
+          weekIdx: w,
+          selectLabel: WEEK_RANGE_LABEL[w] + ' — фев vs мар',
+          rowFeb: byKey.get('feb:' + w),
+          rowMar: byKey.get('mar:' + w)
+        });
+      }
+      return bands;
+    }
+
+    function projectMetrics(row, proj) {
+      const p = row?.projects?.[proj];
+      if (!p) return { leads: 0, calls: 0, presentations: 0, qualified: 0, contactPct: 0, presPct: 0, qualPct: 0 };
+      const L = p.leads;
+      return {
+        leads: L,
+        calls: p.calls,
+        presentations: p.presentations,
+        qualified: p.qualified,
+        contactPct: round0(pct(p.calls, L)),
+        presPct: round0(pct(p.presentations, L)),
+        qualPct: round1(pct(p.qualified, L))
+      };
+    }
+
+    function fmtDeltaPct(cur, prev) {
+      if (prev === undefined || prev === null) return '—';
+      if (prev === 0) return cur > 0 ? '<span class="kpi-up">+100%</span>' : '—';
+      const d = ((cur - prev) / prev) * 100;
+      const s = (Math.round(d * 10) / 10).toString().replace('.', ',') + '%';
+      if (d > 0.05) return '<span class="kpi-up">+' + s + '</span>';
+      if (d < -0.05) return '<span class="kpi-down">' + s + '</span>';
+      return s;
+    }
+
+    function fmtDeltaPp(cur, prev) {
+      const d = cur - prev;
+      if (Math.abs(d) < 0.5) return '—';
+      const s = (Math.round(d) + ' п.п.').replace('-', '−');
+      if (d > 0) return '<span class="kpi-up">+' + Math.round(d) + ' п.п.</span>';
+      return '<span class="kpi-down">' + s + '</span>';
+    }
+
+    const baseOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#e5e7eb', font: { size: 11 } } },
+        tooltip: {
+          backgroundColor: 'rgba(15,23,42,0.95)',
+          borderColor: 'rgba(55,65,81,1)',
+          borderWidth: 1,
+          titleColor: '#e5e7eb',
+          bodyColor: '#e5e7eb',
+          padding: 8
+        },
+        datalabels: {
+          color: '#e5e7eb',
+          anchor: 'end',
+          align: 'end',
+          offset: -2,
+          font: { size: 10, weight: '500' },
+          formatter: (value) => value
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { color: 'rgba(31,41,55,0.5)' } },
+        y: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { color: 'rgba(31,41,55,0.5)' } }
+      }
+    };
+
+    let DATA;
+    let WEEK_BANDS = [];
+    const charts = {};
+
+    function mkBar(id, datasets, datalabelsFmt, yScale) {
+      const el = document.getElementById(id);
+      if (charts[id]) charts[id].destroy();
+      const yMerged = {
+        ...baseOptions.scales.y,
+        ...yScale,
+        ticks: { ...baseOptions.scales.y.ticks, ...(yScale.ticks || {}) }
+      };
+      charts[id] = new Chart(el, {
+        type: 'bar',
+        data: { labels: labelsProjects, datasets },
+        options: {
+          ...baseOptions,
+          plugins: {
+            ...baseOptions.plugins,
+            datalabels: { ...baseOptions.plugins.datalabels, ...datalabelsFmt }
+          },
+          scales: {
+            ...baseOptions.scales,
+            y: yMerged
+          }
+        }
+      });
+    }
+
+    function renderKpis(rowA, rowB, labelA, labelB) {
+      const parts = [];
+      const names = ['Сеосейлс', 'Kineiro', 'Урман Билд'];
+      for (const name of names) {
+        const a = projectMetrics(rowA, name);
+        const b = projectMetrics(rowB, name);
+        parts.push(`
+          <div class="kpi">
+            <div class="kpi-label">${name} — лиды</div>
+            <div class="kpi-value">${fmtRu(a.leads)}</div>
+            <div class="kpi-sub">${labelB}: ${fmtRu(b.leads)} · ${fmtDeltaPct(a.leads, b.leads)}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">${name} — % дозвонов</div>
+            <div class="kpi-value">${a.contactPct}%</div>
+            <div class="kpi-sub">${labelB}: ${b.contactPct}% · ${fmtDeltaPp(a.contactPct, b.contactPct)}</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">${name} — презентации</div>
+            <div class="kpi-value">${fmtRu(a.presentations)}</div>
+            <div class="kpi-sub">${labelB}: ${fmtRu(b.presentations)} · ${fmtDeltaPct(a.presentations, b.presentations)}</div>
+          </div>
+        `);
+      }
+      document.getElementById('kpiGrid').innerHTML = parts.join('');
+    }
+
+    function buildDatasets(rowA, rowB, labelA, labelB) {
+      const ds = (key, bgA, bgB, brdA, brdB) => [
+        {
+          label: key + ' · ' + labelA,
+          data: PROJECTS.map((p) => projectMetrics(rowA, p)[key]),
+          backgroundColor: bgA,
+          borderColor: brdA,
+          borderWidth: 1.2,
+          borderRadius: 6
+        },
+        {
+          label: key + ' · ' + labelB,
+          data: PROJECTS.map((p) => projectMetrics(rowB, p)[key]),
+          backgroundColor: bgB,
+          borderColor: brdB,
+          borderWidth: 1.2,
+          borderRadius: 6
+        }
+      ];
+
+      return {
+        leads: ds('leads', 'rgba(79,70,229,0.9)', 'rgba(249,115,22,0.7)', 'rgba(129,140,248,1)', 'rgba(253,186,116,1)'),
+        calls: ds('calls', 'rgba(79,70,229,0.9)', 'rgba(249,115,22,0.7)', 'rgba(129,140,248,1)', 'rgba(253,186,116,1)'),
+        contact: ds('contactPct', 'rgba(59,130,246,0.9)', 'rgba(248,113,113,0.8)', 'rgba(96,165,250,1)', 'rgba(252,165,165,1)'),
+        pres: ds('presentations', 'rgba(34,197,94,0.9)', 'rgba(22,163,74,0.6)', 'rgba(74,222,128,1)', 'rgba(134,239,172,1)'),
+        presPct: [
+          {
+            label: '% през · ' + labelA,
+            data: PROJECTS.map((p) => projectMetrics(rowA, p).presPct),
+            backgroundColor: 'rgba(244,114,182,0.9)',
+            borderColor: 'rgba(251,207,232,1)',
+            borderWidth: 1.2,
+            borderRadius: 6
+          },
+          {
+            label: '% през · ' + labelB,
+            data: PROJECTS.map((p) => projectMetrics(rowB, p).presPct),
+            backgroundColor: 'rgba(217,70,239,0.7)',
+            borderColor: 'rgba(233,213,255,1)',
+            borderWidth: 1.2,
+            borderRadius: 6
+          }
+        ],
+        qual: ds('qualified', 'rgba(56,189,248,0.9)', 'rgba(14,165,233,0.7)', 'rgba(125,211,252,1)', 'rgba(186,230,253,1)'),
+        qualPct: [
+          {
+            label: '% квал · ' + labelA,
+            data: PROJECTS.map((p) => projectMetrics(rowA, p).qualPct),
+            backgroundColor: 'rgba(56,189,248,0.9)',
+            borderColor: 'rgba(125,211,252,1)',
+            borderWidth: 1.2,
+            borderRadius: 6
+          },
+          {
+            label: '% квал · ' + labelB,
+            data: PROJECTS.map((p) => projectMetrics(rowB, p).qualPct),
+            backgroundColor: 'rgba(14,165,233,0.7)',
+            borderColor: 'rgba(186,230,253,1)',
+            borderWidth: 1.2,
+            borderRadius: 6
+          }
+        ]
+      };
+    }
+
+    function refresh() {
+      const sel = document.getElementById('weekRange');
+      const weekIdx = +sel.value;
+      const band = WEEK_BANDS.find((b) => b.weekIdx === weekIdx);
+      if (!band) return;
+      const rowA = band.rowMar;
+      const rowB = band.rowFeb;
+      const labelA = rowA.label;
+      const labelB = rowB.label;
+      document.getElementById('badgeLabelA').textContent = labelA;
+      document.getElementById('badgeLabelB').textContent = labelB;
+
+      renderKpis(rowA, rowB, labelA, labelB);
+
+      const D = buildDatasets(rowA, rowB, labelA, labelB);
+
+      mkBar('leadsChart', D.leads, { formatter: (v) => fmtRu(v) }, { beginAtZero: true });
+      mkBar('callsChart', D.calls, { formatter: (v) => fmtRu(v) }, { beginAtZero: true });
+      mkBar(
+        'contactChart',
+        D.contact,
+        { formatter: (v) => v + '%' },
+        { beginAtZero: true, max: 100, ticks: { callback: (v) => v + '%' } }
+      );
+      mkBar('presentationsChart', D.pres, { formatter: (v) => fmtRu(v) }, { beginAtZero: true });
+      mkBar(
+        'presentationsPctChart',
+        D.presPct,
+        { formatter: (v) => v + '%' },
+        { beginAtZero: true, max: 30, ticks: { callback: (v) => v + '%' } }
+      );
+      mkBar('qualifiedChart', D.qual, { formatter: (v) => fmtRu(v) }, { beginAtZero: true });
+      mkBar(
+        'qualifiedPctChart',
+        D.qualPct,
+        {
+          formatter: (v) => (Math.round(v * 10) / 10).toString().replace('.', ',') + '%'
+        },
+        { beginAtZero: true, max: 30, ticks: { callback: (v) => v + '%' } }
+      );
+    }
+
+    function fillWeekSelect() {
+      const sel = document.getElementById('weekRange');
+      const prev = sel.value;
+      sel.innerHTML = '';
+      for (const b of WEEK_BANDS) {
+        const o = document.createElement('option');
+        o.value = String(b.weekIdx);
+        o.textContent = b.selectLabel;
+        sel.appendChild(o);
+      }
+      const ok = WEEK_BANDS.some((b) => String(b.weekIdx) === prev);
+      sel.selectedIndex = ok ? WEEK_BANDS.findIndex((b) => String(b.weekIdx) === prev) : 0;
+    }
+
+    async function applySource(source) {
+      DATA = await CallsDashboardData.loadDailyData(source);
+      WEEK_BANDS = aggregateAllWeeks(DATA);
+      if (!WEEK_BANDS.length) throw new Error('Не удалось собрать недели из данных.');
+      fillWeekSelect();
+      refresh();
+    }
+
+    (async function init() {
+      try {
+        document.getElementById('sourceSelect').value = CallsDashboardSource.getSource();
+        await applySource(CallsDashboardSource.getSource());
+
+        document.getElementById('weekRange').addEventListener('change', refresh);
+
+        CallsDashboardSource.bindSourceSelect(document.getElementById('sourceSelect'), async function (s) {
+          try {
+            document.getElementById('loadError').style.display = 'none';
+            await applySource(s);
+          } catch (e) {
+            document.getElementById('loadError').style.display = 'block';
+            document.getElementById('loadError').textContent =
+              (e && e.message ? e.message : String(e));
+          }
+        });
+      } catch (e) {
+        document.getElementById('loadError').style.display = 'block';
+        document.getElementById('loadError').textContent =
+          'Нет данных: запустите scripts/sync_calls_dashboard_data.py. ' + (e && e.message ? e.message : '');
+      }
+    })();
+  </script>
+</body>
+</html>

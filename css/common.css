@@ -1,0 +1,43 @@
+/* Общие элементы: переключатель источника и навигация */
+.source-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(2, 6, 23, 0.5));
+}
+.source-bar label {
+  font-size: 11px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 6px;
+}
+.source-bar select {
+  background: rgba(15, 23, 42, 0.85);
+  color: #f9fafb;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  min-width: 160px;
+}
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  font-size: 13px;
+}
+.nav-links a {
+  color: #a5b4fc;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(165, 180, 252, 0.5);
+}
+.nav-links a:hover {
+  color: #c7d2fe;
+}

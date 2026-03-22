@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Урман vs Важное решение (март) — calls-dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link rel="stylesheet" href="./css/common.css" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --border: rgba(148, 163, 184, 0.22);
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --u: #22c55e;
+      --vr: #f97316;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1100px 520px at 12% 8%, rgba(34, 197, 94, 0.18), transparent 65%),
+        radial-gradient(1100px 520px at 82% 18%, rgba(249, 115, 22, 0.14), transparent 60%),
+        radial-gradient(900px 520px at 55% 90%, rgba(56, 189, 248, 0.10), transparent 60%),
+        linear-gradient(180deg, #050713 0%, #020617 60%, #020617 100%);
+      color: var(--text);
+    }
+    h1 { margin: 0 0 6px; font-size: 24px; font-weight: 650; }
+    .sub {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      margin-bottom: 18px;
+    }
+    a { color:#a5b4fc; text-decoration:none; border-bottom:1px dashed rgba(165,180,252,.5); }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+    .card {
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.95) 0, rgba(2, 6, 23, 0.92) 70%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+    .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .title { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .pill {
+      font-size: 11px;
+      color: var(--muted);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(2, 6, 23, 0.55);
+      white-space: nowrap;
+    }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 980px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .kpi {
+      padding: 10px 10px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(2, 6, 23, 0.70), rgba(15, 23, 42, 0.55));
+      border: 1px solid rgba(148, 163, 184, 0.20);
+    }
+    .kpi .lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .kpi .val { font-size: 18px; font-weight: 650; }
+    .kpi .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    canvas { width: 100% !important; height: 280px !important; }
+    .legend { display: inline-flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+  </style>
+</head>
+<body>
+  <script src="./js/source-store.js"></script>
+
+  <div class="source-bar">
+    <div>
+      <label for="sourceSelect">Источник</label>
+      <select id="sourceSelect" aria-label="Источник данных">
+        <option value="catalog">Каталог</option>
+        <option value="vk">ВК</option>
+      </select>
+    </div>
+    <nav class="nav-links">
+      <a href="./index.html">Месяц</a>
+      <a href="./days.html">По дням</a>
+      <a href="./weeks.html">По неделям</a>
+      <a href="./urman-vr-mar.html">Урман vs ВР</a>
+    </nav>
+  </div>
+
+  <header style="margin-bottom: 10px;">
+    <h1>Март 2026: Урман Билд vs Важное решение</h1>
+    <div class="sub" id="subHead">
+      Сравнение ключевых метрик в разрезе проекта за <b>март 2026</b>. Итоговые строки блоков таблицы (Каталог / ВК).
+    </div>
+  </header>
+
+  <section class="layout">
+    <div class="card">
+      <div class="card-head">
+        <div class="title">Ключевые итоги (март)</div>
+        <div class="legend">
+          <span class="dot" style="background: var(--u)"></span> Урман Билд
+          <span class="dot" style="background: var(--vr)"></span> Важное решение
+        </div>
+      </div>
+      <div class="kpis" id="kpis"></div>
+    </div>
+
+    <div class="grid">
+      <div class="card"><div class="card-head"><div class="title">Лиды</div><span class="pill">шт</span></div><canvas id="leads"></canvas></div>
+      <div class="card"><div class="card-head"><div class="title">Дозвоны</div><span class="pill">звонки &gt; 15 сек (шт)</span></div><canvas id="calls"></canvas></div>
+      <div class="card"><div class="card-head"><div class="title">% дозваниваемости</div><span class="pill">дозвоны / лиды</span></div><canvas id="contactPct"></canvas></div>
+      <div class="card"><div class="card-head"><div class="title">Презентации</div><span class="pill">шт</span></div><canvas id="presentations"></canvas></div>
+      <div class="card"><div class="card-head"><div class="title">% презентаций</div><span class="pill">презентации / лиды</span></div><canvas id="presentationsPct"></canvas></div>
+      <div class="card"><div class="card-head"><div class="title">Квалифицированные лиды</div><span class="pill">квал (шт)</span></div><canvas id="qualified"></canvas></div>
+      <div class="card"><div class="card-head"><div class="title">% квалификации</div><span class="pill">квал / лиды</span></div><canvas id="qualifiedPct"></canvas></div>
+      <div class="card"><div class="card-head"><div class="title">Неквалифицированные</div><span class="pill">неквал (шт)</span></div><canvas id="unqualified"></canvas></div>
+    </div>
+  </section>
+
+  <script>
+    Chart.register(ChartDataLabels);
+
+    const fmtRu = (v) => (typeof v === 'number') ? v.toLocaleString('ru-RU') : (v ?? '');
+    const round1 = (v) => Math.round(v * 10) / 10;
+    const fmtPct = (v) => (round1(v)).toString().replace('.', ',') + '%';
+    const pct = (num, den) => den ? (num / den) * 100 : 0;
+
+    /** Март 2026 — снято из таблиц «Сравнение Каталог» / «Сравнение ВК». */
+    const UR_SOURCES = {
+      catalog: {
+        U: { leads: 336, calls: 171, contactPct: 51, presentations: 59, presentationsPct: 18, qualified: 19, unqualified: 317 },
+        VR: { leads: 93, calls: 35, contactPct: 38, presentations: 4, presentationsPct: 4, qualified: 4, unqualified: 89 }
+      },
+      vk: {
+        U: { leads: 1991, calls: 1298, contactPct: 65, presentations: 291, presentationsPct: 15, qualified: 125, unqualified: 1862 },
+        VR: { leads: 391, calls: 219, contactPct: 56, presentations: 48, presentationsPct: 12, qualified: 25, unqualified: 364 }
+      }
+    };
+
+    function enrichPair(pair) {
+      const U = { ...pair.U };
+      const VR = { ...pair.VR };
+      U.qualifiedPct = pct(U.qualified, U.leads);
+      VR.qualifiedPct = pct(VR.qualified, VR.leads);
+      return { U, VR };
+    }
+
+    const labels = ['Урман Билд', 'Важное решение'];
+    const colors = ['rgba(34,197,94,0.85)', 'rgba(249,115,22,0.75)'];
+    const borders = ['rgba(74,222,128,1)', 'rgba(253,186,116,1)'];
+
+    const chartIds = ['leads', 'calls', 'contactPct', 'presentations', 'presentationsPct', 'qualified', 'qualifiedPct', 'unqualified'];
+    const chartMap = {};
+
+    const base = (isPct) => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(15,23,42,0.95)',
+          borderColor: 'rgba(55,65,81,1)',
+          borderWidth: 1,
+          titleColor: '#e5e7eb',
+          bodyColor: '#e5e7eb',
+          padding: 8,
+          callbacks: {
+            label: (ctx) => (isPct ? fmtPct(ctx.parsed.y) : fmtRu(ctx.parsed.y))
+          }
+        },
+        datalabels: {
+          color: '#e5e7eb',
+          anchor: 'end',
+          align: 'end',
+          offset: -2,
+          font: { size: 11, weight: '600' },
+          formatter: (v) => isPct ? fmtPct(v) : fmtRu(v)
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#9ca3af', font: { size: 11 } },
+          grid: { color: 'rgba(31,41,55,0.35)' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#9ca3af',
+            font: { size: 11 },
+            callback: (v) => isPct ? (v + '%') : v
+          },
+          grid: { color: 'rgba(31,41,55,0.35)' }
+        }
+      }
+    });
+
+    function destroyCharts() {
+      for (const id of chartIds) {
+        if (chartMap[id]) {
+          chartMap[id].destroy();
+          chartMap[id] = null;
+        }
+      }
+    }
+
+    const mkBar = (id, title, vals, isPct, max) => {
+      const el = document.getElementById(id);
+      if (chartMap[id]) chartMap[id].destroy();
+      chartMap[id] = new Chart(el, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: title,
+            data: vals,
+            backgroundColor: colors,
+            borderColor: borders,
+            borderWidth: 1.2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          ...base(isPct),
+          scales: {
+            ...base(isPct).scales,
+            y: {
+              ...base(isPct).scales.y,
+              ...(typeof max === 'number' ? { max } : {})
+            }
+          }
+        }
+      });
+    };
+
+    const kpiItems = [
+      { key: 'leads', label: 'Лиды', fmt: fmtRu },
+      { key: 'calls', label: 'Дозвоны', fmt: fmtRu },
+      { key: 'contactPct', label: '% дозвонов', fmt: (v) => v + '%' },
+      { key: 'presentations', label: 'Презентации', fmt: fmtRu },
+      { key: 'presentationsPct', label: '% презентаций', fmt: (v) => v + '%' },
+      { key: 'qualified', label: 'Квал', fmt: fmtRu },
+      { key: 'qualifiedPct', label: '% квал', fmt: fmtPct },
+      { key: 'unqualified', label: 'Неквал', fmt: fmtRu }
+    ];
+
+    function renderAll(source) {
+      const key = source === 'vk' ? 'vk' : 'catalog';
+      const { U, VR } = enrichPair(UR_SOURCES[key]);
+      const label = key === 'vk' ? 'ВК' : 'Каталог';
+      document.getElementById('subHead').innerHTML =
+        'Сравнение ключевых метрик за <b>март 2026</b>. Источник: <b>' + label + '</b> (итоговые строки блоков).';
+
+      const kpiWrap = document.getElementById('kpis');
+      kpiWrap.innerHTML = '';
+      for (const it of kpiItems) {
+        const div = document.createElement('div');
+        div.className = 'kpi';
+        div.innerHTML = `
+          <div class="lbl">${it.label}</div>
+          <div class="val">${it.fmt(U[it.key])}</div>
+          <div class="hint">Урман: <b style="color:#bbf7d0">${it.fmt(U[it.key])}</b> · ВР: <b style="color:#fed7aa">${it.fmt(VR[it.key])}</b></div>
+        `;
+        kpiWrap.appendChild(div);
+      }
+
+      destroyCharts();
+      mkBar('leads', 'Лиды', [U.leads, VR.leads], false);
+      mkBar('calls', 'Дозвоны', [U.calls, VR.calls], false);
+      mkBar('contactPct', '% дозваниваемости', [U.contactPct, VR.contactPct], true, 100);
+      mkBar('presentations', 'Презентации', [U.presentations, VR.presentations], false);
+      mkBar('presentationsPct', '% презентаций', [U.presentationsPct, VR.presentationsPct], true, 100);
+      mkBar('qualified', 'Квал', [U.qualified, VR.qualified], false);
+      mkBar('qualifiedPct', '% квал', [U.qualifiedPct, VR.qualifiedPct], true, 30);
+      mkBar('unqualified', 'Неквал', [U.unqualified, VR.unqualified], false);
+    }
+
+    (function init() {
+      const sel = document.getElementById('sourceSelect');
+      sel.value = CallsDashboardSource.getSource();
+      renderAll(CallsDashboardSource.getSource());
+
+      CallsDashboardSource.bindSourceSelect(sel, function (s) {
+        renderAll(s);
+      });
+    })();
+  </script>
+</body>
+</html>
