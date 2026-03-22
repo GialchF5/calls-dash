@@ -6,7 +6,6 @@
   <title>Дашборд по дням — calls-dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-  <script src="./js/chart-env.js"></script>
   <link rel="stylesheet" href="./css/common.css" />
   <style>
     :root{
@@ -280,7 +279,7 @@
             }
           ]
         },
-        options: CallsChartEnv.mergeChartOptions({
+        options: {
           ...baseOptions(kind),
           plugins: {
             ...baseOptions(kind).plugins,
@@ -301,7 +300,7 @@
               }
             }
           }
-        })
+        }
       });
     }
 
@@ -322,7 +321,7 @@
             }
           ]
         },
-        options: CallsChartEnv.mergeChartOptions({
+        options: {
           ...baseOptions(kind),
           plugins: {
             ...baseOptions(kind).plugins,
@@ -338,7 +337,7 @@
               }
             }
           }
-        })
+        }
       });
     }
 
