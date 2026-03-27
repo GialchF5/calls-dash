@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Квал лиды дек25-мар26 — Обзор</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link rel="stylesheet" href="./css/common.css" />
+</head>
+<body>
+  <div class="top-bar">
+    <nav class="nav-links">
+      <a href="./index.html">Обзор</a>
+      <a href="./sources.html">По источникам</a>
+      <a href="./roles.html">По ролям</a>
+      <a href="../index.html">Главная</a>
+    </nav>
+  </div>
+
+  <header style="margin-bottom: 22px;">
+    <h1>Квал лиды: декабрь 2025 - март 2026</h1>
+    <div class="subtitle">Новый независимый дашборд: Сеосейлс / Kineiro, источники, роли и месяцы.</div>
+  </header>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="filters">
+      <div class="filter-item"><label for="projectSelect">Проект</label><select id="projectSelect"></select></div>
+      <div class="filter-item"><label for="sourceSelect">Источник</label><select id="sourceSelect"></select></div>
+      <div class="filter-item"><label for="roleSelect">Роль</label><select id="roleSelect"></select></div>
+    </div>
+  </div>
+
+  <div id="loadError" class="err"></div>
+
+  <section class="layout">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Ключевые KPI</div><span class="pill">по фильтрам</span></div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
+    <div class="charts-grid">
+      <div class="card span-2">
+        <div class="card-header"><div class="card-title">Лиды по месяцам</div><span class="pill">штук</span></div>
+        <canvas id="leadsChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Квал по месяцам</div><span class="pill">штук</span></div>
+        <canvas id="qualifiedChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">CR квал по месяцам</div><span class="pill">проценты</span></div>
+        <canvas id="crQualChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Дозвоны по месяцам</div><span class="pill">штук</span></div>
+        <canvas id="callsChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Презентации по месяцам</div><span class="pill">штук</span></div>
+        <canvas id="presentationsChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">CR презентации по месяцам</div><span class="pill">проценты</span></div>
+        <canvas id="crPresentationsChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Скайп по месяцам</div><span class="pill">штук</span></div>
+        <canvas id="skypeChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">CR скайп по месяцам</div><span class="pill">проценты</span></div>
+        <canvas id="crSkypeChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">CR дозвон по месяцам</div><span class="pill">проценты</span></div>
+        <canvas id="crCallsChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <script src="./js/qual-data-loader.js"></script>
+  <script src="./js/qual-aggregates.js"></script>
+  <script src="./js/qual-ui.js"></script>
+  <script>
+    Chart.register(ChartDataLabels);
+    const charts = {};
+    const MONTH_ORDER = ['дек.25', 'янв.26', 'февр.26', 'мар.26'];
+    const chartOptions = QualUi.makeBaseChartOptions();
+    let allRows = [];
+
+    function renderKpi(total) {
+      document.getElementById('kpiGrid').innerHTML = [
+        '<div class="kpi"><div class="kpi-label">Лиды</div><div class="kpi-value">' + QualUi.fmtNum(total.leads) + '</div></div>',
+        '<div class="kpi"><div class="kpi-label">Квал</div><div class="kpi-value">' + QualUi.fmtNum(total.qualified) + '</div></div>',
+        '<div class="kpi"><div class="kpi-label">CR квал</div><div class="kpi-value">' + QualUi.fmtPct(total.crQualified) + '</div></div>',
+        '<div class="kpi"><div class="kpi-label">Презентации</div><div class="kpi-value">' + QualUi.fmtNum(total.presentations) + '</div></div>',
+        '<div class="kpi"><div class="kpi-label">CR презентации</div><div class="kpi-value">' + QualUi.fmtPct(total.crPresentations) + '</div></div>',
+        '<div class="kpi"><div class="kpi-label">Скайп</div><div class="kpi-value">' + QualUi.fmtNum(total.skype) + '</div></div>',
+        '<div class="kpi"><div class="kpi-label">CR скайп</div><div class="kpi-value">' + QualUi.fmtPct(total.crSkype) + '</div></div>',
+        '<div class="kpi"><div class="kpi-label">Дозвоны</div><div class="kpi-value">' + QualUi.fmtNum(total.calls) + '</div></div>',
+        '<div class="kpi"><div class="kpi-label">CR дозвон</div><div class="kpi-value">' + QualUi.fmtPct(total.crCalls) + '</div></div>'
+      ].join('');
+    }
+
+    function drawChart(id, labels, dataset, color, asPercent) {
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(document.getElementById(id), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: dataset.label, data: dataset.data, backgroundColor: color, borderRadius: 6 }]
+        },
+        options: Object.assign({}, chartOptions, {
+          plugins: Object.assign({}, chartOptions.plugins, {
+            datalabels: Object.assign({}, chartOptions.plugins.datalabels, {
+              formatter: function (value) {
+                if (!Number.isFinite(value)) return value;
+                if (asPercent) return value.toLocaleString('ru-RU') + '%';
+                return value.toLocaleString('ru-RU');
+              }
+            })
+          }),
+          scales: {
+            x: chartOptions.scales.x,
+            y: Object.assign({}, chartOptions.scales.y, asPercent ? { max: 100 } : {})
+          }
+        })
+      });
+    }
+
+    function render() {
+      const filtered = QualAggregates.applyFilters(allRows, QualUi.readFilters());
+      const total = QualAggregates.totals(filtered);
+      renderKpi(total);
+
+      const grouped = QualAggregates.groupBy(filtered, 'month');
+      const labels = MONTH_ORDER.filter((m) => grouped[m]);
+      drawChart('leadsChart', labels, { label: 'Лиды', data: labels.map((m) => grouped[m].leads) }, 'rgba(79,70,229,0.9)');
+      drawChart('qualifiedChart', labels, { label: 'Квал', data: labels.map((m) => grouped[m].qualified) }, 'rgba(56,189,248,0.9)');
+      drawChart('crQualChart', labels, { label: 'CR квал, %', data: labels.map((m) => grouped[m].crQualified) }, 'rgba(34,197,94,0.9)', true);
+      drawChart('callsChart', labels, { label: 'Дозвоны', data: labels.map((m) => grouped[m].calls) }, 'rgba(249,115,22,0.85)');
+      drawChart('presentationsChart', labels, { label: 'Презентации', data: labels.map((m) => grouped[m].presentations) }, 'rgba(236,72,153,0.9)');
+      drawChart('crPresentationsChart', labels, { label: 'CR презентации, %', data: labels.map((m) => grouped[m].crPresentations) }, 'rgba(168,85,247,0.9)', true);
+      drawChart('skypeChart', labels, { label: 'Скайп', data: labels.map((m) => grouped[m].skype) }, 'rgba(14,165,233,0.9)');
+      drawChart('crSkypeChart', labels, { label: 'CR скайп, %', data: labels.map((m) => grouped[m].crSkype) }, 'rgba(6,182,212,0.9)', true);
+      drawChart('crCallsChart', labels, { label: 'CR дозвон, %', data: labels.map((m) => grouped[m].crCalls) }, 'rgba(251,146,60,0.9)', true);
+    }
+
+    (async function init() {
+      try {
+        allRows = await QualDataLoader.load();
+        QualUi.fillSelect('projectSelect', QualUi.optionsFromRows(allRows, 'project'), 'Все проекты');
+        QualUi.fillSelect('sourceSelect', QualUi.optionsFromRows(allRows, 'source'), 'Все источники');
+        QualUi.fillSelect('roleSelect', QualUi.optionsFromRows(allRows, 'role'), 'Все роли');
+        QualUi.bindFilters(render);
+        render();
+      } catch (e) {
+        document.getElementById('loadError').style.display = 'block';
+        document.getElementById('loadError').textContent = e && e.message ? e.message : String(e);
+      }
+    })();
+  </script>
+</body>
+</html>

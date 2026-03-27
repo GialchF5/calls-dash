@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Квал лиды дек25-мар26 — источники</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link rel="stylesheet" href="./css/common.css" />
+</head>
+<body>
+  <div class="top-bar">
+    <nav class="nav-links">
+      <a href="./index.html">Обзор</a>
+      <a href="./sources.html">По источникам</a>
+      <a href="./roles.html">По ролям</a>
+      <a href="../index.html">Главная</a>
+    </nav>
+  </div>
+
+  <header style="margin-bottom: 22px;">
+    <h1>Сравнение по источникам</h1>
+    <div class="subtitle">Полный набор сравнений по метрикам для выбранного источника и 4 периодов.</div>
+  </header>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="filters">
+      <div class="filter-item"><label for="projectSelect">Проект</label><select id="projectSelect"></select></div>
+      <div class="filter-item"><label for="sourceSelect">Источник</label><select id="sourceSelect"></select></div>
+      <div class="filter-item"><label for="roleSelect">Роль</label><select id="roleSelect"></select></div>
+    </div>
+  </div>
+
+  <div id="loadError" class="err"></div>
+
+  <section class="charts-grid">
+    <div class="card span-2">
+      <div class="card-header"><div class="card-title">Лиды по источникам</div><span class="pill">штук</span></div>
+      <canvas id="leadsBySource"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Квал по источникам</div><span class="pill">штук</span></div>
+      <canvas id="qualBySource"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">CR квал по источникам</div><span class="pill">проценты</span></div>
+      <canvas id="crBySource"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Дозвоны по источникам</div><span class="pill">штук</span></div>
+      <canvas id="callsBySource"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Презентации по источникам</div><span class="pill">штук</span></div>
+      <canvas id="presentationsBySource"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">CR презентации по источникам</div><span class="pill">проценты</span></div>
+      <canvas id="crPresentationsBySource"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Скайп по источникам</div><span class="pill">штук</span></div>
+      <canvas id="skypeBySource"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">CR скайп по источникам</div><span class="pill">проценты</span></div>
+      <canvas id="crSkypeBySource"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">CR дозвон по источникам</div><span class="pill">проценты</span></div>
+      <canvas id="crCallsBySource"></canvas>
+    </div>
+  </section>
+
+  <script src="./js/qual-data-loader.js"></script>
+  <script src="./js/qual-aggregates.js"></script>
+  <script src="./js/qual-ui.js"></script>
+  <script>
+    Chart.register(ChartDataLabels);
+    const charts = {};
+    let allRows = [];
+
+    const monthOrder = ['дек.25', 'янв.26', 'февр.26', 'мар.26'];
+    const monthColors = {
+      'дек.25': 'rgba(148,163,184,0.85)',
+      'янв.26': 'rgba(56,189,248,0.85)',
+      'февр.26': 'rgba(249,115,22,0.85)',
+      'мар.26': 'rgba(79,70,229,0.9)'
+    };
+
+    function draw(id, labels, datasets, max100) {
+      if (charts[id]) charts[id].destroy();
+      const base = QualUi.makeBaseChartOptions();
+      charts[id] = new Chart(document.getElementById(id), {
+        type: 'bar',
+        data: { labels: labels, datasets: datasets },
+        options: Object.assign({}, base, {
+          plugins: Object.assign({}, base.plugins, {
+            datalabels: Object.assign({}, base.plugins.datalabels, {
+              formatter: function (value) {
+                if (!Number.isFinite(value)) return value;
+                if (max100) return value.toLocaleString('ru-RU') + '%';
+                return value.toLocaleString('ru-RU');
+              }
+            })
+          }),
+          scales: { x: base.scales.x, y: Object.assign({}, base.scales.y, max100 ? { max: 100 } : {}) }
+        })
+      });
+    }
+
+    function render() {
+      const filters = QualUi.readFilters();
+      filters.month = 'all';
+      const rows = QualAggregates.applyFilters(allRows, filters);
+      const labels = Array.from(new Set(rows.map((r) => r.source))).sort((a, b) => a.localeCompare(b, 'ru'));
+
+      function buildMetricDatasets(metricKey) {
+        return monthOrder.map(function (month) {
+          const monthRows = rows.filter((r) => r.month === month);
+          const grouped = QualAggregates.groupBy(monthRows, 'source');
+          return {
+            label: month,
+            data: labels.map((k) => (grouped[k] ? grouped[k][metricKey] : 0)),
+            backgroundColor: monthColors[month],
+            borderRadius: 6
+          };
+        });
+      }
+
+      draw('leadsBySource', labels, buildMetricDatasets('leads'));
+      draw('qualBySource', labels, buildMetricDatasets('qualified'));
+      draw('crBySource', labels, buildMetricDatasets('crQualified'), true);
+      draw('callsBySource', labels, buildMetricDatasets('calls'));
+      draw('presentationsBySource', labels, buildMetricDatasets('presentations'));
+      draw('crPresentationsBySource', labels, buildMetricDatasets('crPresentations'), true);
+      draw('skypeBySource', labels, buildMetricDatasets('skype'));
+      draw('crSkypeBySource', labels, buildMetricDatasets('crSkype'), true);
+      draw('crCallsBySource', labels, buildMetricDatasets('crCalls'), true);
+    }
+
+    (async function init() {
+      try {
+        allRows = await QualDataLoader.load();
+        QualUi.fillSelect('projectSelect', QualUi.optionsFromRows(allRows, 'project'), 'Все проекты');
+        QualUi.fillSelect('sourceSelect', QualUi.optionsFromRows(allRows, 'source'), 'Все источники', false);
+        QualUi.fillSelect('roleSelect', QualUi.optionsFromRows(allRows, 'role'), 'Все роли');
+        QualUi.bindFilters(render);
+        render();
+      } catch (e) {
+        document.getElementById('loadError').style.display = 'block';
+        document.getElementById('loadError').textContent = e && e.message ? e.message : String(e);
+      }
+    })();
+  </script>
+</body>
+</html>
